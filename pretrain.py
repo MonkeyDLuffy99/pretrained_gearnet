@@ -129,47 +129,6 @@ from torchdrug.layers import geometry
 import torch
 import math
 import pickle
-import multiprocessing as mp
-import logging
-
-# code borrowed from:
-# https://stackoverflow.com/questions/64644449/recover-from-segfault-in-python 
-def parametrized(dec):
-    """This decorator can be used to create other decorators that accept arguments"""
-
-    def layer(*args, **kwargs):
-        def repl(f):
-            return dec(f, *args, **kwargs)
-
-        return repl
-
-    return layer
-
-
-@parametrized
-def sigsev_guard(fcn, default_value=None, timeout=None):
-    """Used as a decorator with arguments.
-    The decorated function will be called with its input arguments in another process.
-
-    If the execution lasts longer than *timeout* seconds, it will be considered failed.
-
-    If the execution fails, *default_value* will be returned.
-    """
-
-    def _fcn_wrapper(*args, **kwargs):
-        q = mp.Queue()
-        p = mp.Process(target=lambda q: q.put(fcn(*args, **kwargs)), args=(q,))
-        p.start()
-        p.join(timeout=timeout)
-        exit_code = p.exitcode
-
-        if exit_code == 0:
-            return q.get()
-
-        logging.warning('Process did not exit correctly. Exit code: {}'.format(exit_code))
-        return default_value
-
-    return _fcn_wrapper
 
 device = torch.device("cpu")
 
@@ -186,24 +145,18 @@ model = models.GearNet(input_dim=21,
                          concat_hidden=True, short_cut=True,
                          readout="sum", num_angle_bin=8).to(device)
 
-model_dict = torch.load("distance_gearnet_edge.pth", map_location=torch.device("cpu"))
+model_dict = torch.load("angle_gearnet_edge.pth", map_location=torch.device("cpu"))
 model.load_state_dict(model_dict)
 print(my_target_proteins)
 
-@sigsev_guard(default_value=-1, timeout=60)
-def gearnet_forward(graph, input_):
-    return model.forward(graph, input_)
-
-
+# distance gearnet does not work
 def create_embeddings(proteins):
-    # f = open("distance_gearnet_tp", "wb")
     idx_to_embedding = {}
     for i, t in tqdm(enumerate(proteins)):
-        # if segfault handler doesn;t work skip index 19 and 63
         try:
             t = data.Protein.pack(t).to(device)
             t = graph_construction_model(t).to(device)
-            res = gearnet_forward(t, t.residue_feature.float())
+            res = model.forward(t, t.residue_feature.float())
             idx_to_embedding[i] = res
         except:
             print("Encountered issue at index:", i)
@@ -212,8 +165,8 @@ def create_embeddings(proteins):
 distance_embeddings_tp = create_embeddings(my_target_proteins)
 distance_embeddings_e3 = create_embeddings(my_e3_ligases)
 
-f = open("distance_gearnet_tp", "wb")
+f = open("angle_gearnet_tp", "wb")
 pickle.dump(distance_embeddings_tp, f)
 
-f = open("distance_gearnet_e3", "wb")
+f = open("angle_gearnet_e3", "wb")
 pickle.dump(distance_embeddings_e3, f)
