@@ -199,6 +199,7 @@ def create_embeddings(proteins):
     # f = open("distance_gearnet_tp", "wb")
     idx_to_embedding = {}
     for i, t in tqdm(enumerate(proteins)):
+        # if segfault handler doesn;t work skip index 19 and 63
         try:
             t = data.Protein.pack(t).to(device)
             t = graph_construction_model(t).to(device)
