@@ -152,9 +152,9 @@ print(my_target_proteins)
 def create_embeddings(proteins):
     idx_to_embedding = {}
     for i, t in tqdm(enumerate(proteins)):
-        print(i)
-        if i == 19 or i == 63:
-            continue
+        mask = torch.zeros(t.num_residue, dtype=torch.bool, device="cpu")
+        mask[0:800] = True
+        t = t.subresidue(mask)
         try:
             t = data.Protein.pack(t).to(device)
             t = graph_construction_model(t).to(device)
@@ -164,7 +164,7 @@ def create_embeddings(proteins):
             print("Encountered issue at index:", i)
     return idx_to_embedding
 
-distance_embeddings_tp = create_embeddings(my_target_proteins)
+# distance_embeddings_tp = create_embeddings(my_target_proteins)
 distance_embeddings_e3 = create_embeddings(my_e3_ligases)
 
 f = open("angle_gearnet_tp", "wb")
