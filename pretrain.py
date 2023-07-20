@@ -42,31 +42,20 @@ for i, val in enumerate(final_labels):
 df = pd.read_csv("filtered_protacs.csv")
 target_proteins = np.array(df["Target Protein"])
 e3_targets = np.array(df["E3 Target"])
-warheads = np.array(df["Warhead"])
-linkers = np.array(df["Linker"])
-e3_ligands = np.array(df["E3 Ligand"])
 uniprots_poi = np.array(df["Uniprot POI"])
 uniprots_e3 = np.array(df["Uniprot E3"])
 
 target_proteins = target_proteins[labeled_indices]
 e3_targets = e3_targets[labeled_indices]
-warheads = warheads[labeled_indices]
-linkers = linkers[labeled_indices]
-e3_ligands = e3_ligands[labeled_indices]
 uniprots_poi = uniprots_poi[labeled_indices]
 uniprots_e3 = uniprots_e3[labeled_indices]
 
-final_labels = np.array(final_labels)
-my_labels = final_labels[labeled_indices]
+del final_labels
 
 print(len(e3_targets))
 print(len(target_proteins))
-print(len(warheads))
-print(len(linkers))
-print(len(e3_ligands))
 print(len(uniprots_poi))
 print(len(uniprots_e3))
-print(len(my_labels))
 
 from torchdrug import data, utils
 from tqdm import tqdm as tqdm
@@ -82,52 +71,43 @@ for u, p in zip(uniprots, pdb):
 
 correct_indices = []
 my_target_proteins = []
-my_e3_ligases = []
-for i, (poi, e3) in tqdm(enumerate(zip(uniprots_poi, uniprots_e3))):
+# my_e3_ligases = []
+for i, (poi) in tqdm(enumerate(uniprots_poi)):
     try:
         poi_pdb_id = uniprot_to_pdb_map[poi]
     except:
         print("Key error encountered, no pdb file exists for", poi)
         continue
-    try:
-        e3_pdb_id = uniprot_to_pdb_map[e3]
-    except:
-        print("Key error encountered, no pdb file exists for", e3)
-        continue
+    # try:
+    #     e3_pdb_id = uniprot_to_pdb_map[e3]
+    # except:
+    #     print("Key error encountered, no pdb file exists for", e3)
+    #     continue
     url_poi = "https://files.rcsb.org/download/"
-    url_e3 = "https://files.rcsb.org/download/"
-    print(poi_pdb_id, e3_pdb_id)
+   #  url_e3 = "https://files.rcsb.org/download/"
     url_poi += poi_pdb_id + ".pdb"
-    url_e3 += e3_pdb_id + ".pdb"
+    # url_e3 += e3_pdb_id + ".pdb"
     poi_pdb_file = utils.download(url_poi, "pdb_files")
-    e3_pdb_file = utils.download(url_e3, "pdb_files")
+    # e3_pdb_file = utils.download(url_e3, "pdb_files")
     my_poi = data.Protein.from_pdb(poi_pdb_file, atom_feature="position", bond_feature="length", residue_feature="symbol")
-    my_e3 = data.Protein.from_pdb(e3_pdb_file, atom_feature="position", bond_feature="length", residue_feature="symbol")
+    # my_e3 = data.Protein.from_pdb(e3_pdb_file, atom_feature="position", bond_feature="length", residue_feature="symbol")
     my_target_proteins.append(my_poi)
-    my_e3_ligases.append(my_e3)
+    # my_e3_ligases.append(my_e3)
     correct_indices.append(i)
 print(len(correct_indices))
 
 my_target_proteins = data.Protein.pack(my_target_proteins)
-my_e3_ligases = data.Protein.pack(my_e3_ligases)
 
-warheads = warheads[correct_indices]
-linkers = linkers[correct_indices]
-e3_ligands = e3_ligands[correct_indices]
-
-my_labels = my_labels[correct_indices]
+del uniprots_poi
+del uniprots_e3
 
 print(len(my_target_proteins))
-print(len(my_e3_ligases))
-print(len(warheads))
-print(len(linkers))
-print(len(e3_ligands))
-print(len(my_labels))
+# print(len(my_e3_ligases))
+
 
 from torchdrug import layers, models
 from torchdrug.layers import geometry
 import torch
-import math
 import pickle
 
 device = torch.device("cpu")
@@ -164,11 +144,11 @@ def create_embeddings(proteins):
             print("Encountered issue at index:", i)
     return idx_to_embedding
 
-# distance_embeddings_tp = create_embeddings(my_target_proteins)
-distance_embeddings_e3 = create_embeddings(my_e3_ligases)
+distance_embeddings_tp = create_embeddings(my_target_proteins)
+# distance_embeddings_e3 = create_embeddings(my_e3_ligases)
 
 f = open("angle_gearnet_tp", "wb")
 pickle.dump(distance_embeddings_tp, f)
 
-f = open("angle_gearnet_e3", "wb")
-pickle.dump(distance_embeddings_e3, f)
+# f = open("angle_gearnet_e3", "wb")
+# pickle.dump(distance_embeddings_e3, f)
