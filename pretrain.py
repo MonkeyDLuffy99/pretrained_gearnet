@@ -153,7 +153,7 @@ def create_embeddings(proteins):
     idx_to_embedding = {}
     for i, t in tqdm(enumerate(proteins)):
         print(i)
-        if i == 20 or i == 64:
+        if i == 19 or i == 63:
             continue
         try:
             t = data.Protein.pack(t).to(device)
