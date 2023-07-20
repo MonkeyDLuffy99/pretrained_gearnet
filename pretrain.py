@@ -149,7 +149,6 @@ model_dict = torch.load("angle_gearnet_edge.pth", map_location=torch.device("cpu
 model.load_state_dict(model_dict)
 print(my_target_proteins)
 
-# distance gearnet does not work
 def create_embeddings(proteins):
     idx_to_embedding = {}
     for i, t in tqdm(enumerate(proteins)):
