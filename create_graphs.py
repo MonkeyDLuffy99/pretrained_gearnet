@@ -106,39 +106,10 @@ del uniprots_e3
 print(len(my_target_proteins))
 print(len(my_e3_ligases))
 
-
-from torchdrug import layers, models
-from torchdrug.layers import geometry
-import torch
 import pickle
 
-device = torch.device("cpu")
+f = open("my_target_proteins", "wb")
+pickle.dump(my_target_proteins, f)
 
-graph_construction_model = layers.GraphConstruction(node_layers=[geometry.AlphaCarbonNode()],
-                                                    edge_layers=[geometry.SequentialEdge(max_distance=2),
-                                                                 geometry.SpatialEdge(radius=10.0, min_distance=5),
-                                                                 geometry.KNNEdge(k=10, min_distance=5)],
-                                                    edge_feature="gearnet")
-
-
-print(my_target_proteins)
-
-def prepare_graphs(proteins):
-    target_protein_graphs = []
-    for t in tqdm(proteins):
-        mask = torch.zeros(t.num_residue, dtype=torch.bool, device="cpu")
-        mask[0:500] = True
-        t = t.subresidue(mask)
-        t = data.Protein.pack(t)
-        t = graph_construction_model(t)
-        target_protein_graphs.append(t)
-    return data.Protein.pack(target_protein_graphs)
-
-target_protein_graphs = prepare_graphs(my_target_proteins)
-e3_target_graphs = prepare_graphs(my_e3_ligases)
-
-f = open("target_protein_graphs", "wb")
-pickle.dump(target_protein_graphs, f)
-
-f = open("e3_target_graphs", "wb")
-pickle.dump(e3_target_graphs, f)
+f = open("my_e3_ligases", "wb")
+pickle.dump(my_e3_ligases, f)
