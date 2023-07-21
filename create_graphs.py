@@ -51,6 +51,8 @@ uniprots_poi = uniprots_poi[labeled_indices]
 uniprots_e3 = uniprots_e3[labeled_indices]
 
 del final_labels
+del lines
+del refined_lines
 
 print(len(e3_targets))
 print(len(target_proteins))
@@ -71,28 +73,28 @@ for u, p in zip(uniprots, pdb):
 
 correct_indices = []
 my_target_proteins = []
-# my_e3_ligases = []
-for i, (poi) in tqdm(enumerate(uniprots_poi)):
+my_e3_ligases = []
+for i, (poi, e3) in tqdm(enumerate(uniprots_poi, uniprots_e3)):
     try:
         poi_pdb_id = uniprot_to_pdb_map[poi]
     except:
         print("Key error encountered, no pdb file exists for", poi)
         continue
-    # try:
-    #     e3_pdb_id = uniprot_to_pdb_map[e3]
-    # except:
-    #     print("Key error encountered, no pdb file exists for", e3)
-    #     continue
+    try:
+        e3_pdb_id = uniprot_to_pdb_map[e3]
+    except:
+        print("Key error encountered, no pdb file exists for", e3)
+        continue
     url_poi = "https://files.rcsb.org/download/"
-   #  url_e3 = "https://files.rcsb.org/download/"
+    url_e3 = "https://files.rcsb.org/download/"
     url_poi += poi_pdb_id + ".pdb"
-    # url_e3 += e3_pdb_id + ".pdb"
+    url_e3 += e3_pdb_id + ".pdb"
     poi_pdb_file = utils.download(url_poi, "pdb_files")
-    # e3_pdb_file = utils.download(url_e3, "pdb_files")
+    e3_pdb_file = utils.download(url_e3, "pdb_files")
     my_poi = data.Protein.from_pdb(poi_pdb_file, atom_feature="position", bond_feature="length", residue_feature="symbol")
-    # my_e3 = data.Protein.from_pdb(e3_pdb_file, atom_feature="position", bond_feature="length", residue_feature="symbol")
+    my_e3 = data.Protein.from_pdb(e3_pdb_file, atom_feature="position", bond_feature="length", residue_feature="symbol")
     my_target_proteins.append(my_poi)
-    # my_e3_ligases.append(my_e3)
+    my_e3_ligases.append(my_e3)
     correct_indices.append(i)
 print(len(correct_indices))
 
@@ -102,7 +104,7 @@ del uniprots_poi
 del uniprots_e3
 
 print(len(my_target_proteins))
-# print(len(my_e3_ligases))
+print(len(my_e3_ligases))
 
 
 from torchdrug import layers, models
@@ -118,37 +120,22 @@ graph_construction_model = layers.GraphConstruction(node_layers=[geometry.AlphaC
                                                                  geometry.KNNEdge(k=10, min_distance=5)],
                                                     edge_feature="gearnet")
 
-model = models.GearNet(input_dim=21,
-                         hidden_dims=[512, 512, 512, 512, 512, 512],
-                         num_relation=7, edge_input_dim=59,
-                         batch_norm=True, activation="relu",
-                         concat_hidden=True, short_cut=True,
-                         readout="sum", num_angle_bin=8).to(device)
 
-model_dict = torch.load("angle_gearnet_edge.pth", map_location=torch.device("cpu"))
-model.load_state_dict(model_dict)
 print(my_target_proteins)
 
-def create_embeddings(proteins):
-    idx_to_embedding = {}
-    for i, t in tqdm(enumerate(proteins)):
-        mask = torch.zeros(t.num_residue, dtype=torch.bool, device="cpu")
-        mask[0:800] = True
-        t = t.subresidue(mask)
-        try:
-            t = data.Protein.pack(t).to(device)
-            t = graph_construction_model(t).to(device)
-            res = model.forward(t, t.residue_feature.float())
-            idx_to_embedding[i] = res
-        except:
-            print("Encountered issue at index:", i)
-    return idx_to_embedding
+def prepare_graphs(proteins):
+    target_protein_graphs = []
+    for t in tqdm(proteins):
+        t = data.Protein.pack(t)
+        t = graph_construction_model(t)
+        target_protein_graphs.append(t)
+    return data.Protein.pack(target_protein_graphs)
 
-distance_embeddings_tp = create_embeddings(my_target_proteins)
-# distance_embeddings_e3 = create_embeddings(my_e3_ligases)
+target_protein_graphs = prepare_graphs(my_target_proteins)
+e3_target_graphs = prepare_graphs(my_e3_ligases)
 
-f = open("angle_gearnet_tp", "wb")
-pickle.dump(distance_embeddings_tp, f)
+f = open("target_protein_graphs", "wb")
+pickle.dump(target_protein_graphs, f)
 
-# f = open("angle_gearnet_e3", "wb")
-# pickle.dump(distance_embeddings_e3, f)
+f = open("e3_target_graphs", "wb")
+pickle.dump(e3_target_graphs, f)
