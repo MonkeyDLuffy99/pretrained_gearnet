@@ -74,7 +74,7 @@ for u, p in zip(uniprots, pdb):
 correct_indices = []
 my_target_proteins = []
 my_e3_ligases = []
-for i, (poi, e3) in tqdm(enumerate(uniprots_poi, uniprots_e3)):
+for i, (poi, e3) in tqdm(enumerate(zip(uniprots_poi, uniprots_e3))):
     try:
         poi_pdb_id = uniprot_to_pdb_map[poi]
     except:
