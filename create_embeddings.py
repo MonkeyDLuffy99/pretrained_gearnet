@@ -25,9 +25,6 @@ model.load_state_dict(model_dict)
 def get_embeddings(proteins):
     protein_embeddings = []
     for t in tqdm(proteins):
-        mask = torch.zeros(t.num_residue, dtype=torch.bool, device="cpu")
-        mask[0:800] = True
-        t = t.subresidue(mask)
         res = model.forward(t, t.residue_feature.float())
         protein_embeddings.append(res)
     return protein_embeddings
