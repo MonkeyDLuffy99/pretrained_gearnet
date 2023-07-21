@@ -127,7 +127,7 @@ def prepare_graphs(proteins):
     target_protein_graphs = []
     for t in tqdm(proteins):
         mask = torch.zeros(t.num_residue, dtype=torch.bool, device="cpu")
-        mask[0:800] = True
+        mask[0:500] = True
         t = t.subresidue(mask)
         t = data.Protein.pack(t)
         t = graph_construction_model(t)
