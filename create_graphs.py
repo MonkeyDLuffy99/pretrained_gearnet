@@ -108,8 +108,11 @@ print(len(my_e3_ligases))
 
 import pickle
 
-f = open("my_target_proteins", "wb")
+f = open("my_target_proteins.pkl", "wb")
 pickle.dump(my_target_proteins, f)
 
-f = open("my_e3_ligases", "wb")
+f = open("my_e3_ligases.pkl", "wb")
 pickle.dump(my_e3_ligases, f)
+
+f = open("correct_indices.pkl", "wb")
+pickle.dump(correct_indices, f)
